@@ -72,7 +72,7 @@ function updateVideoPreview(inputId, path) {
     player.load();
 
     // Show filename in the badge
-    const filename = path.split('/').pop() || path;
+    const filename = path.split(/[/\\]/).pop() || path;
     if (badge) {
       badge.textContent = filename;
       badge.classList.add("has-file");
@@ -105,7 +105,7 @@ async function browse(inputId, mode) {
       const prefix = inputId.charAt(0) + "-";
       const badge = document.getElementById(prefix + "filename-badge");
       if (badge) {
-        badge.textContent = data.path.split('/').pop() || data.path;
+        badge.textContent = data.path.split(/[/\\]/).pop() || data.path;
         badge.classList.add("has-file");
       }
     }
@@ -370,7 +370,49 @@ async function startCaptions() {
   });
 }
 
+// Watch inputs for manual edits and update preview/badges
+function setupManualPathInputs() {
+  const inputs = [
+    { id: "s-input", mode: "file" },
+    { id: "c-folder", mode: "folder" },
+    { id: "c-output", mode: "save" },
+    { id: "t-input", mode: "file" },
+    { id: "t-output", mode: "save" }
+  ];
+
+  inputs.forEach(({ id, mode }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const updateUI = () => {
+      const val = el.value.trim();
+      const prefix = id.charAt(0) + "-";
+      const badge = document.getElementById(prefix + "filename-badge");
+      
+      if (val) {
+        if (mode === "file") {
+          updateVideoPreview(id, val);
+        } else if (badge) {
+          badge.textContent = val.split(/[/\\]/).pop() || val;
+          badge.classList.add("has-file");
+        }
+      } else {
+        if (mode === "file") {
+          updateVideoPreview(id, "");
+        } else if (badge) {
+          badge.textContent = mode === "folder" ? "No folder selected" : "No file selected";
+          badge.classList.remove("has-file");
+        }
+      }
+    };
+
+    el.addEventListener("input", updateUI);
+    el.addEventListener("change", updateUI);
+  });
+}
+
 // Run setup on load
 window.addEventListener("DOMContentLoaded", () => {
   setupSliders();
+  setupManualPathInputs();
 });

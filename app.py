@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 import threading
 import uuid
@@ -58,16 +59,53 @@ def index():
 def browse():
     data = request.get_json(force=True)
     mode = data.get("mode", "file")
-    if mode == "folder":
-        script = 'POSIX path of (choose folder with prompt "Select folder")'
-    elif mode == "save":
-        script = 'POSIX path of (choose file name with prompt "Save as")'
-    else:
-        script = 'POSIX path of (choose file with prompt "Select video")'
+    path = None
+    
+    current_os = platform.system()
+    if current_os == "Darwin":
+        if mode == "folder":
+            script = 'POSIX path of (choose folder with prompt "Select folder")'
+        elif mode == "save":
+            script = 'POSIX path of (choose file name with prompt "Save as")'
+        else:
+            script = 'POSIX path of (choose file with prompt "Select video")'
 
-    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-    path = result.stdout.strip()
-    if result.returncode != 0 or not path:
+        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        path = result.stdout.strip()
+        if result.returncode != 0:
+            path = None
+    elif current_os == "Windows":
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        root = None
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            
+            if mode == "folder":
+                path = filedialog.askdirectory(title="Select Folder")
+            elif mode == "save":
+                path = filedialog.asksaveasfilename(
+                    title="Save As",
+                    filetypes=[("Video Files", "*.mp4 *.mov *.avi"), ("All Files", "*.*")]
+                )
+            else:
+                path = filedialog.askopenfilename(
+                    title="Select Video",
+                    filetypes=[("Video Files", "*.mp4 *.mov *.avi"), ("All Files", "*.*")]
+                )
+        except Exception as e:
+            path = None
+        finally:
+            if root:
+                try:
+                    root.destroy()
+                except Exception:
+                    pass
+    
+    if not path:
         return jsonify({"path": None})
     return jsonify({"path": path})
 
@@ -77,7 +115,15 @@ def reveal():
     data = request.get_json(force=True)
     path = data.get("path")
     if path and os.path.exists(path):
-        subprocess.run(["open", "-R", path])
+        current_os = platform.system()
+        if current_os == "Windows":
+            norm_path = os.path.normpath(path)
+            if os.path.isdir(norm_path):
+                subprocess.run(["explorer.exe", norm_path])
+            else:
+                subprocess.run(["explorer.exe", "/select,", norm_path])
+        else:
+            subprocess.run(["open", "-R", path])
         return jsonify({"ok": True})
     return jsonify({"ok": False})
 

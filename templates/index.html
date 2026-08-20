@@ -48,13 +48,10 @@
             </div>
             <h3>Choose a video file</h3>
             <p class="file-subtext">MP4, MOV, MKV — processed locally on your machine</p>
-            <button class="btn btn-secondary browse-btn" onclick="browse('s-input','file')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
-              </svg>
-              Browse
-            </button>
-            <input type="text" id="s-input" class="hidden-path-input" placeholder="No file selected" readonly>
+            <div class="path-row" style="width: 100%; max-width: 480px; margin: 0 auto 10px auto;">
+              <input type="text" id="s-input" placeholder="Type or paste video file path here...">
+              <button class="btn btn-secondary browse-btn" onclick="browse('s-input','file')" style="margin-top: 0;">Browse</button>
+            </div>
             <div class="selected-filename-badge" id="s-filename-badge">No file selected</div>
           </div>
         </div>
@@ -177,13 +174,10 @@
             </div>
             <h3>Choose a folder containing clips</h3>
             <p class="file-subtext">Will naturally sort and combine MP4 files inside</p>
-            <button class="btn btn-secondary browse-btn" onclick="browse('c-folder','folder')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
-              </svg>
-              Browse Folder
-            </button>
-            <input type="text" id="c-folder" class="hidden-path-input" placeholder="No folder selected" readonly>
+            <div class="path-row" style="width: 100%; max-width: 480px; margin: 0 auto 10px auto;">
+              <input type="text" id="c-folder" placeholder="Type or paste folder path here...">
+              <button class="btn btn-secondary browse-btn" onclick="browse('c-folder','folder')" style="margin-top: 0;">Browse</button>
+            </div>
             <div class="selected-filename-badge" id="c-filename-badge">No folder selected</div>
           </div>
         </div>
@@ -203,7 +197,7 @@
           <div class="field" style="margin-top: 15px;">
             <label>Output file path (optional)</label>
             <div class="path-row">
-              <input type="text" id="c-output" placeholder="defaults next to source folder" readonly>
+              <input type="text" id="c-output" placeholder="defaults next to source folder">
               <button class="btn btn-secondary" onclick="browse('c-output','save')">Browse</button>
             </div>
           </div>
@@ -276,13 +270,10 @@
             </div>
             <h3>Choose a video file</h3>
             <p class="file-subtext">Will extract subtitles locally using Whisper model</p>
-            <button class="btn btn-secondary browse-btn" onclick="browse('t-input','file')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
-              </svg>
-              Browse
-            </button>
-            <input type="text" id="t-input" class="hidden-path-input" placeholder="No file selected" readonly>
+            <div class="path-row" style="width: 100%; max-width: 480px; margin: 0 auto 10px auto;">
+                <input type="text" id="t-input" placeholder="Type or paste video file path here...">
+                <button class="btn btn-secondary browse-btn" onclick="browse('t-input','file')" style="margin-top: 0;">Browse</button>
+            </div>
             <div class="selected-filename-badge" id="t-filename-badge">No file selected</div>
           </div>
         </div>
@@ -309,7 +300,7 @@
           <div class="field">
             <label>Output file path (optional)</label>
             <div class="path-row">
-              <input type="text" id="t-output" placeholder="defaults to .srt next to source video" readonly>
+              <input type="text" id="t-output" placeholder="defaults to .srt next to source video">
               <button class="btn btn-secondary" onclick="browse('t-output','save')">Browse</button>
             </div>
           </div>
