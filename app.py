@@ -75,35 +75,54 @@ def browse():
         if result.returncode != 0:
             path = None
     elif current_os == "Windows":
-        import tkinter as tk
-        from tkinter import filedialog
-        
-        root = None
-        try:
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
+        # Launch a separate Python process to run Tkinter in its main thread
+        # to avoid Flask threading/event loop conflicts.
+        if mode == "folder":
+            cmd_str = (
+                "import tkinter as tk; "
+                "from tkinter import filedialog; "
+                "root = tk.Tk(); "
+                "root.withdraw(); "
+                "root.attributes('-topmost', True); "
+                "print(filedialog.askdirectory(title='Select Folder'))"
+            )
+        elif mode == "save":
+            cmd_str = (
+                "import tkinter as tk; "
+                "from tkinter import filedialog; "
+                "root = tk.Tk(); "
+                "root.withdraw(); "
+                "root.attributes('-topmost', True); "
+                "print(filedialog.asksaveasfilename(title='Save As', filetypes=[('Video Files', '*.mp4 *.mov *.avi'), ('All Files', '*.*')]))"
+            )
+        else:
+            cmd_str = (
+                "import tkinter as tk; "
+                "from tkinter import filedialog; "
+                "root = tk.Tk(); "
+                "root.withdraw(); "
+                "root.attributes('-topmost', True); "
+                "print(filedialog.askopenfilename(title='Select Video', filetypes=[('Video Files', '*.mp4 *.mov *.avi'), ('All Files', '*.*')]))"
+            )
             
-            if mode == "folder":
-                path = filedialog.askdirectory(title="Select Folder")
-            elif mode == "save":
-                path = filedialog.asksaveasfilename(
-                    title="Save As",
-                    filetypes=[("Video Files", "*.mp4 *.mov *.avi"), ("All Files", "*.*")]
-                )
-            else:
-                path = filedialog.askopenfilename(
-                    title="Select Video",
-                    filetypes=[("Video Files", "*.mp4 *.mov *.avi"), ("All Files", "*.*")]
-                )
-        except Exception as e:
+        import sys
+        python_exe = sys.executable or "python"
+        
+        try:
+            startupinfo = None
+            if hasattr(subprocess, "STARTUPINFO"):
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                
+            res = subprocess.run(
+                [python_exe, "-c", cmd_str],
+                capture_output=True,
+                text=True,
+                startupinfo=startupinfo
+            )
+            path = res.stdout.strip()
+        except Exception:
             path = None
-        finally:
-            if root:
-                try:
-                    root.destroy()
-                except Exception:
-                    pass
     
     if not path:
         return jsonify({"path": None})
@@ -126,53 +145,6 @@ def reveal():
             subprocess.run(["open", "-R", path])
         return jsonify({"ok": True})
     return jsonify({"ok": False})
-
-
-@app.route("/api/fs/list", methods=["POST"])
-def fs_list():
-    data = request.get_json(force=True) or {}
-    path = data.get("path")
-    
-    # Default to user home directory if no path or if it doesn't exist
-    if not path or not os.path.exists(path):
-        path = os.path.expanduser("~")
-        
-    try:
-        path = os.path.abspath(path)
-        items = []
-        
-        # Add parent directory
-        parent = os.path.dirname(path)
-        if parent != path:
-            items.append({
-                "name": "..",
-                "path": parent,
-                "is_dir": True
-            })
-            
-        for entry in os.scandir(path):
-            try:
-                items.append({
-                    "name": entry.name,
-                    "path": entry.path,
-                    "is_dir": entry.is_dir()
-                })
-            except OSError:
-                pass
-                
-        # Sort ".." first, then directories, then files
-        items.sort(key=lambda x: (x["name"] != "..", not x["is_dir"], x["name"].lower()))
-        
-        return jsonify({
-            "success": True,
-            "current_path": path,
-            "items": items
-        })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        })
 
 
 @app.route("/api/video")

@@ -50,7 +50,7 @@
             <p class="file-subtext">MP4, MOV, MKV — processed locally on your machine</p>
             <div class="path-row" style="width: 100%; max-width: 480px; margin: 0 auto 10px auto;">
               <input type="text" id="s-input" placeholder="Type or paste video file path here...">
-              <button class="btn btn-secondary browse-btn" onclick="openFsModal('s-input','file')" style="margin-top: 0;">Browse</button>
+              <button class="btn btn-secondary browse-btn" onclick="browse('s-input','file')" style="margin-top: 0;">Browse</button>
             </div>
             <div class="selected-filename-badge" id="s-filename-badge">No file selected</div>
           </div>
@@ -176,7 +176,7 @@
             <p class="file-subtext">Will naturally sort and combine MP4 files inside</p>
             <div class="path-row" style="width: 100%; max-width: 480px; margin: 0 auto 10px auto;">
               <input type="text" id="c-folder" placeholder="Type or paste folder path here...">
-              <button class="btn btn-secondary browse-btn" onclick="openFsModal('c-folder','folder')" style="margin-top: 0;">Browse</button>
+              <button class="btn btn-secondary browse-btn" onclick="browse('c-folder','folder')" style="margin-top: 0;">Browse</button>
             </div>
             <div class="selected-filename-badge" id="c-filename-badge">No folder selected</div>
           </div>
@@ -198,7 +198,7 @@
             <label>Output file path (optional)</label>
             <div class="path-row">
               <input type="text" id="c-output" placeholder="defaults next to source folder">
-              <button class="btn btn-secondary" onclick="openFsModal('c-output','save')">Browse</button>
+              <button class="btn btn-secondary" onclick="browse('c-output','save')">Browse</button>
             </div>
           </div>
 
@@ -272,7 +272,7 @@
             <p class="file-subtext">Will extract subtitles locally using Whisper model</p>
             <div class="path-row" style="width: 100%; max-width: 480px; margin: 0 auto 10px auto;">
                 <input type="text" id="t-input" placeholder="Type or paste video file path here...">
-                <button class="btn btn-secondary browse-btn" onclick="openFsModal('t-input','file')" style="margin-top: 0;">Browse</button>
+                <button class="btn btn-secondary browse-btn" onclick="browse('t-input','file')" style="margin-top: 0;">Browse</button>
             </div>
             <div class="selected-filename-badge" id="t-filename-badge">No file selected</div>
           </div>
@@ -301,7 +301,7 @@
             <label>Output file path (optional)</label>
             <div class="path-row">
               <input type="text" id="t-output" placeholder="defaults to .srt next to source video">
-              <button class="btn btn-secondary" onclick="openFsModal('t-output','save')">Browse</button>
+              <button class="btn btn-secondary" onclick="browse('t-output','save')">Browse</button>
             </div>
           </div>
         </div>
@@ -351,27 +351,6 @@
     </div>
   </div>
 
-</div>
-
-<!-- File Browser Modal -->
-<div id="fs-modal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3 id="fs-modal-title">Select File</h3>
-      <button class="close-btn" onclick="closeFsModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="path-breadcrumbs-bar">
-        <input type="text" id="fs-current-path" placeholder="C:\...">
-        <button class="btn btn-secondary btn-sm" onclick="navToPathInput()">Go</button>
-      </div>
-      <div class="fs-list-container" id="fs-list"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeFsModal()">Cancel</button>
-      <button class="btn btn-primary" id="fs-select-btn" onclick="confirmFsSelection()">Select</button>
-    </div>
-  </div>
 </div>
 
 <script src="{{ url_for('static', filename='app.js') }}"></script>
