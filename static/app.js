@@ -411,6 +411,176 @@ function setupManualPathInputs() {
   });
 }
 
+let currentFsTargetId = null;
+let currentFsMode = null;
+let currentFsSelectedPath = null;
+let currentFsDirectoryPath = "";
+
+async function openFsModal(inputId, mode) {
+  currentFsTargetId = inputId;
+  currentFsMode = mode; // "file", "folder", "save"
+  currentFsSelectedPath = null;
+  
+  // Set modal title
+  const titleEl = document.getElementById("fs-modal-title");
+  if (titleEl) {
+    if (mode === "folder") {
+      titleEl.textContent = "Select Folder";
+    } else if (mode === "save") {
+      titleEl.textContent = "Save As";
+    } else {
+      titleEl.textContent = "Select Video File";
+    }
+  }
+
+  // Get initial directory path from existing input value, or default to backend default
+  const existingPath = document.getElementById(inputId).value.trim();
+  let startPath = existingPath;
+  if (existingPath && mode === "file") {
+    // get parent directory
+    startPath = existingPath.substring(0, Math.max(existingPath.lastIndexOf('/'), existingPath.lastIndexOf('\\')));
+  }
+
+  const modal = document.getElementById("fs-modal");
+  modal.classList.add("active");
+
+  await loadFsDirectory(startPath);
+}
+
+function closeFsModal() {
+  const modal = document.getElementById("fs-modal");
+  modal.classList.remove("active");
+}
+
+async function loadFsDirectory(path) {
+  const listEl = document.getElementById("fs-list");
+  listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Loading...</div>';
+
+  try {
+    const res = await fetch("/api/fs/list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: red;">Error: ${data.error}</div>`;
+      return;
+    }
+
+    currentFsDirectoryPath = data.current_path;
+    document.getElementById("fs-current-path").value = data.current_path;
+
+    listEl.innerHTML = "";
+    
+    // Render items
+    data.items.forEach(item => {
+      // Filter out files if we are in folder mode, except parent dir ".."
+      if (currentFsMode === "folder" && !item.is_dir) {
+        return;
+      }
+      
+      const itemEl = document.createElement("div");
+      itemEl.className = "fs-item";
+      itemEl.dataset.path = item.path;
+      itemEl.dataset.isDir = item.is_dir;
+      
+      // Icon
+      let iconHtml = "";
+      if (item.name === "..") {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate(90deg);">
+            <path d="M9 18l6-6-6-6"></path>
+          </svg>
+        `;
+      } else if (item.is_dir) {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        `;
+      } else {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+        `;
+      }
+
+      itemEl.innerHTML = `
+        <span class="fs-item-icon ${item.is_dir ? 'dir' : 'file'}">${iconHtml}</span>
+        <span class="fs-item-name">${item.name}</span>
+      `;
+
+      // Handle Double Click (Navigate into folder)
+      itemEl.addEventListener("dblclick", () => {
+        if (item.is_dir) {
+          loadFsDirectory(item.path);
+        } else {
+          currentFsSelectedPath = item.path;
+          confirmFsSelection();
+        }
+      });
+
+      // Handle Click (Select item)
+      itemEl.addEventListener("click", () => {
+        document.querySelectorAll(".fs-item").forEach(el => el.classList.remove("selected"));
+        itemEl.classList.add("selected");
+        
+        if (item.name !== "..") {
+          currentFsSelectedPath = item.path;
+        } else {
+          currentFsSelectedPath = null;
+        }
+      });
+
+      listEl.appendChild(itemEl);
+    });
+
+  } catch (err) {
+    listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: red;">Error: ${err.message}</div>`;
+  }
+}
+
+function navToPathInput() {
+  const path = document.getElementById("fs-current-path").value.trim();
+  if (path) {
+    loadFsDirectory(path);
+  }
+}
+
+function confirmFsSelection() {
+  let selected = currentFsSelectedPath;
+  if (currentFsMode === "folder" && !selected) {
+    selected = currentFsDirectoryPath;
+  }
+
+  if (!selected && currentFsMode !== "save") {
+    alert("Please select a file or folder.");
+    return;
+  }
+
+  if (currentFsMode === "save") {
+    if (!selected) {
+      const filename = prompt("Enter output filename (e.g. output.mp4):", "output.mp4");
+      if (!filename) return;
+      const separator = currentFsDirectoryPath.includes('\\') ? '\\' : '/';
+      selected = currentFsDirectoryPath + separator + filename;
+    }
+  }
+
+  const inputEl = document.getElementById(currentFsTargetId);
+  if (inputEl) {
+    inputEl.value = selected;
+    const event = new Event('change', { bubbles: true });
+    inputEl.dispatchEvent(event);
+  }
+
+  closeFsModal();
+}
+
 // Run setup on load
 window.addEventListener("DOMContentLoaded", () => {
   setupSliders();

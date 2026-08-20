@@ -128,6 +128,53 @@ def reveal():
     return jsonify({"ok": False})
 
 
+@app.route("/api/fs/list", methods=["POST"])
+def fs_list():
+    data = request.get_json(force=True) or {}
+    path = data.get("path")
+    
+    # Default to user home directory if no path or if it doesn't exist
+    if not path or not os.path.exists(path):
+        path = os.path.expanduser("~")
+        
+    try:
+        path = os.path.abspath(path)
+        items = []
+        
+        # Add parent directory
+        parent = os.path.dirname(path)
+        if parent != path:
+            items.append({
+                "name": "..",
+                "path": parent,
+                "is_dir": True
+            })
+            
+        for entry in os.scandir(path):
+            try:
+                items.append({
+                    "name": entry.name,
+                    "path": entry.path,
+                    "is_dir": entry.is_dir()
+                })
+            except OSError:
+                pass
+                
+        # Sort ".." first, then directories, then files
+        items.sort(key=lambda x: (x["name"] != "..", not x["is_dir"], x["name"].lower()))
+        
+        return jsonify({
+            "success": True,
+            "current_path": path,
+            "items": items
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+
 @app.route("/api/video")
 def video():
     path = request.args.get("path")
