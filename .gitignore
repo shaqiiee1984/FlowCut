@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python caches and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local media and test files
+*.mp4
+*.srt
+test_dummy/
+output/
+
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride

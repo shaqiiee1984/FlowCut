@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Tools Studio</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app-container">
+  
+  <!-- Tabs Navigation Bar -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="silence">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+      Silence Removal
+    </button>
+    <button class="tab-btn" data-tab="combine">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      </svg>
+      Combine Clips
+    </button>
+    <button class="tab-btn" data-tab="captions">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      Extract Captions
+    </button>
+  </div>
+
+  <!-- TAB 1: REMOVE SILENCE -->
+  <div id="silence" class="tab-panel active">
+    <div class="two-col-layout">
+      <!-- Left Column: Controls -->
+      <div class="left-col">
+        
+        <!-- File Selector Card -->
+        <div class="card choose-file-card">
+          <div class="file-drop-zone">
+            <div class="file-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 7l-7 5 7 5V7z"></path>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+            </div>
+            <h3>Choose a video file</h3>
+            <p class="file-subtext">MP4, MOV, MKV — processed locally on your machine</p>
+            <button class="btn btn-secondary browse-btn" onclick="browse('s-input','file')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+              </svg>
+              Browse
+            </button>
+            <input type="text" id="s-input" class="hidden-path-input" placeholder="No file selected" readonly>
+            <div class="selected-filename-badge" id="s-filename-badge">No file selected</div>
+          </div>
+        </div>
+
+        <!-- Detection Settings Card -->
+        <div class="card settings-card">
+          <h3 class="settings-title">Detection settings</h3>
+          
+          <div class="slider-field">
+            <div class="slider-header">
+              <span class="slider-label">Silence threshold</span>
+              <span class="slider-value" id="s-noise-val">-30 dB</span>
+            </div>
+            <input type="range" id="s-noise-slider" min="-60" max="-10" value="-30">
+            <input type="hidden" id="s-noise" value="-30dB">
+            <p class="slider-help">How quiet audio must be to count as silence.</p>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-header">
+              <span class="slider-label">Minimum silence length</span>
+              <span class="slider-value" id="s-duration-val">0.50 s</span>
+            </div>
+            <input type="range" id="s-duration" min="0.1" max="3.0" step="0.05" value="0.5">
+            <p class="slider-help">Shorter pauses are kept as natural speech.</p>
+          </div>
+
+          <div class="slider-grid">
+            <div class="slider-field">
+              <div class="slider-header">
+                <span class="slider-label">Cut buffer (before)</span>
+                <span class="slider-value" id="s-pad-start-val">0.15 s</span>
+              </div>
+              <input type="range" id="s-pad-start" min="0.0" max="1.0" step="0.05" value="0.15">
+            </div>
+            
+            <div class="slider-field">
+              <div class="slider-header">
+                <span class="slider-label">Cut buffer (after)</span>
+                <span class="slider-value" id="s-pad-end-val">0.40 s</span>
+              </div>
+              <input type="range" id="s-pad-end" min="0.0" max="1.0" step="0.05" value="0.40">
+            </div>
+          </div>
+
+          <div class="checkbox-row" style="margin-top: 15px;">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="s-copy">
+              <span class="checkbox-box"></span>
+              <span class="checkbox-text">Use stream copy (fast, but only safe with frequent keyframes)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="action-row">
+          <button class="btn btn-primary run-action-btn" id="s-run-btn" onclick="startSilence(true)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+            Preview silences
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Live Preview & Status -->
+      <div class="right-col">
+        
+        <!-- Video Player Preview Card -->
+        <div class="card preview-card">
+          <h3 class="preview-title">Video Preview</h3>
+          <div class="video-preview-box">
+            <video id="s-video-player" controls class="video-player" style="display: none;"></video>
+            <div id="s-video-placeholder" class="video-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="placeholder-icon">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <line x1="2" y1="7" x2="7" y2="7"></line>
+                <line x1="2" y1="17" x2="7" y2="17"></line>
+                <line x1="17" y1="17" x2="22" y2="17"></line>
+                <line x1="17" y1="7" x2="22" y2="7"></line>
+              </svg>
+              <p>Select a video and preview or process to see results.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Realtime Logs Card -->
+        <div class="card log-card">
+          <h3 class="log-title">Execution Logs</h3>
+          <div class="log" id="s-log">Ready. Logs will output here during process...</div>
+        </div>
+
+        <!-- Results Card -->
+        <div class="card results-card" id="s-results-container" style="display: none;">
+          <h3 class="results-title">Analysis Results</h3>
+          <div class="result" id="s-result"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: COMBINE CLIPS -->
+  <div id="combine" class="tab-panel">
+    <div class="two-col-layout">
+      <!-- Left Column: Controls -->
+      <div class="left-col">
+        
+        <div class="card choose-file-card">
+          <div class="file-drop-zone">
+            <div class="file-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3>Choose a folder containing clips</h3>
+            <p class="file-subtext">Will naturally sort and combine MP4 files inside</p>
+            <button class="btn btn-secondary browse-btn" onclick="browse('c-folder','folder')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+              </svg>
+              Browse Folder
+            </button>
+            <input type="text" id="c-folder" class="hidden-path-input" placeholder="No folder selected" readonly>
+            <div class="selected-filename-badge" id="c-filename-badge">No folder selected</div>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <h3 class="settings-title">Combine settings</h3>
+          
+          <div class="slider-field">
+            <div class="slider-header">
+              <span class="slider-label">Alternating Zoom Amount</span>
+              <span class="slider-value" id="c-zoom-val">10 %</span>
+            </div>
+            <input type="range" id="c-zoom" min="0" max="40" step="1" value="10">
+            <p class="slider-help">Alternate clips will zoom in by this percent for dynamic cuts.</p>
+          </div>
+
+          <div class="field" style="margin-top: 15px;">
+            <label>Output file path (optional)</label>
+            <div class="path-row">
+              <input type="text" id="c-output" placeholder="defaults next to source folder" readonly>
+              <button class="btn btn-secondary" onclick="browse('c-output','save')">Browse</button>
+            </div>
+          </div>
+
+          <div class="checkbox-row" style="margin-top: 10px;">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="c-start-zoomed">
+              <span class="checkbox-box"></span>
+              <span class="checkbox-text">Start with the zoomed clip instead of original</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary run-action-btn" id="c-run-btn" onclick="startCombine()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            Combine clips
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column -->
+      <div class="right-col">
+        
+        <div class="card preview-card">
+          <h3 class="preview-title">Output Preview</h3>
+          <div class="video-preview-box">
+            <video id="c-video-player" controls class="video-player" style="display: none;"></video>
+            <div id="c-video-placeholder" class="video-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="placeholder-icon">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+              <p>Combined video preview will be available here when completed.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card log-card">
+          <h3 class="log-title">Execution Logs</h3>
+          <div class="log" id="c-log">Ready. Logs will output here during process...</div>
+        </div>
+
+        <div class="card results-card" id="c-results-container" style="display: none;">
+          <h3 class="results-title">Combine Results</h3>
+          <div class="result" id="c-result"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: EXTRACT CAPTIONS -->
+  <div id="captions" class="tab-panel">
+    <div class="two-col-layout">
+      <!-- Left Column: Controls -->
+      <div class="left-col">
+        
+        <div class="card choose-file-card">
+          <div class="file-drop-zone">
+            <div class="file-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3>Choose a video file</h3>
+            <p class="file-subtext">Will extract subtitles locally using Whisper model</p>
+            <button class="btn btn-secondary browse-btn" onclick="browse('t-input','file')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+              </svg>
+              Browse
+            </button>
+            <input type="text" id="t-input" class="hidden-path-input" placeholder="No file selected" readonly>
+            <div class="selected-filename-badge" id="t-filename-badge">No file selected</div>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <h3 class="settings-title">Whisper settings</h3>
+          
+          <div class="field">
+            <label>Model Size</label>
+            <select id="t-model">
+              <option value="tiny">tiny (fastest, lowest resource)</option>
+              <option value="base">base</option>
+              <option value="small" selected>small (default)</option>
+              <option value="medium">medium (more accurate, slower)</option>
+              <option value="large">large (most accurate, slowest)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Language (optional)</label>
+            <input type="text" id="t-language" placeholder="e.g. English, Spanish (defaults to auto-detect)">
+          </div>
+
+          <div class="field">
+            <label>Output file path (optional)</label>
+            <div class="path-row">
+              <input type="text" id="t-output" placeholder="defaults to .srt next to source video" readonly>
+              <button class="btn btn-secondary" onclick="browse('t-output','save')">Browse</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary run-action-btn" id="t-run-btn" onclick="startCaptions()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <path d="M12 20h9M3 20v-8c0-2.2 1.8-4 4-4h10c2.2 0 4 1.8 4 4v8"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            Extract captions
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column -->
+      <div class="right-col">
+        
+        <div class="card preview-card">
+          <h3 class="preview-title">Video Preview</h3>
+          <div class="video-preview-box">
+            <video id="t-video-player" controls class="video-player" style="display: none;"></video>
+            <div id="t-video-placeholder" class="video-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="placeholder-icon">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+              <p>Select a video and preview or process to see results.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card log-card">
+          <h3 class="log-title">Execution Logs</h3>
+          <div class="log" id="t-log">Ready. Logs will output here during process...</div>
+        </div>
+
+        <div class="card results-card" id="t-results-container" style="display: none;">
+          <h3 class="results-title">Extracted Subtitles</h3>
+          <div class="result" id="t-result"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
