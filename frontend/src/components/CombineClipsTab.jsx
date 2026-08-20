@@ -5,7 +5,7 @@ import { Folder, FolderOpen, Layers, CheckCircle, AlertCircle } from 'lucide-rea
 
 export default function CombineClipsTab() {
   const [folderPath, setFolderPath] = useState('');
-  const [zoomVal, setZoomVal] = useState(10);
+  const [zoomRange, setZoomRange] = useState([10, 25]);
   const [outputPath, setOutputPath] = useState('');
   const [startZoomed, setStartZoomed] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -74,7 +74,8 @@ export default function CombineClipsTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           folder: folderPath,
-          zoom: parseFloat(zoomVal),
+          zoom_min: zoomRange[0],
+          zoom_max: zoomRange[1],
           start_zoomed: startZoomed,
           output: outputPath || null
         })
@@ -152,18 +153,36 @@ export default function CombineClipsTab() {
           
           <div className="slider-field">
             <div className="slider-header">
-              <span className="slider-label">Alternating Zoom Amount</span>
-              <span className="slider-value">{zoomVal} %</span>
+              <span className="slider-label">Alternating zoom range</span>
+              <span className="slider-value">{zoomRange[0]}–{zoomRange[1]}%</span>
             </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="40" 
-              step="1" 
-              value={zoomVal} 
-              onChange={(e) => setZoomVal(parseInt(e.target.value))}
-            />
-            <p className="slider-help">Alternate clips will zoom in by this percent for dynamic cuts.</p>
+            <div className="range-slider-pair">
+              <label className="range-slider-control">
+                <span>Minimum</span>
+                <input
+                  type="range"
+                  min="0"
+                  max={zoomRange[1]}
+                  step="1"
+                  value={zoomRange[0]}
+                  onChange={(e) => setZoomRange([parseInt(e.target.value, 10), zoomRange[1]])}
+                />
+                <strong>{zoomRange[0]}%</strong>
+              </label>
+              <label className="range-slider-control">
+                <span>Maximum</span>
+                <input
+                  type="range"
+                  min={zoomRange[0]}
+                  max="40"
+                  step="1"
+                  value={zoomRange[1]}
+                  onChange={(e) => setZoomRange([zoomRange[0], parseInt(e.target.value, 10)])}
+                />
+                <strong>{zoomRange[1]}%</strong>
+              </label>
+            </div>
+            <p className="slider-help">Each alternate clip gets a random zoom between the selected limits.</p>
           </div>
 
           <div className="field" style={{ marginTop: '15px' }}>

@@ -1,5 +1,6 @@
 import glob
 import os
+import random
 import re
 import tempfile
 
@@ -49,9 +50,16 @@ def process_clip(src, out_path, zoom, orig_w, orig_h):
     return result.returncode == 0
 
 
-def run_combine(folder, zoom=10, start_zoomed=False, output=None, log=print):
+def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=False, output=None, log=print):
     if not os.path.isdir(folder):
         raise NotADirectoryError(f"can't find folder {folder}")
+
+    if zoom_min is None:
+        zoom_min = zoom
+    if zoom_max is None:
+        zoom_max = zoom
+    if zoom_min < 0 or zoom_max > 40 or zoom_min > zoom_max:
+        raise ValueError("zoom range must be between 0 and 40%, with minimum no greater than maximum")
 
     clips = find_clips(folder)
     if not clips:
@@ -83,11 +91,12 @@ def run_combine(folder, zoom=10, start_zoomed=False, output=None, log=print):
     plan = []
     for i, path in enumerate(valid_clips):
         is_zoomed = (i % 2 == 1) if not start_zoomed else (i % 2 == 0)
-        plan.append((path, is_zoomed))
+        zoom_amount = random.uniform(zoom_min, zoom_max) if is_zoomed else 0
+        plan.append((path, is_zoomed, zoom_amount))
 
-    log(f"combine plan ({len(plan)} clip(s), zoom = {zoom:.0f}% on alternates):")
-    for path, is_zoomed in plan:
-        tag = f"ZOOM +{zoom:.0f}%" if is_zoomed else "original"
+    log(f"combine plan ({len(plan)} clip(s), random zoom = {zoom_min:.0f}-{zoom_max:.0f}% on alternates):")
+    for path, is_zoomed, zoom_amount in plan:
+        tag = f"ZOOM +{zoom_amount:.0f}%" if is_zoomed else "original"
         log(f"  {os.path.basename(path):<12} -> {tag}")
 
     if output:
@@ -101,8 +110,7 @@ def run_combine(folder, zoom=10, start_zoomed=False, output=None, log=print):
         list_path = os.path.join(tmp, "concat_list.txt")
         processed_paths = []
 
-        for i, (path, is_zoomed) in enumerate(plan):
-            zoom_amount = zoom if is_zoomed else 0
+        for i, (path, is_zoomed, zoom_amount) in enumerate(plan):
             processed_path = os.path.join(tmp, f"proc_{i:04d}.mp4")
             log(f"processing {os.path.basename(path)} ({'zoomed' if is_zoomed else 'original'})...")
             ok = process_clip(path, processed_path, zoom_amount, orig_w, orig_h)
@@ -127,6 +135,9 @@ def run_combine(folder, zoom=10, start_zoomed=False, output=None, log=print):
     log(f"done, combined video saved to {output_path}")
     return {
         "output_path": output_path,
-        "plan": [{"name": os.path.basename(p), "zoomed": z} for p, z in plan],
+        "plan": [
+            {"name": os.path.basename(path), "zoomed": is_zoomed, "zoom": zoom_amount}
+            for path, is_zoomed, zoom_amount in plan
+        ],
         "skipped": skipped
     }

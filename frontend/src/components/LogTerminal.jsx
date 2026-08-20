@@ -1,4 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Terminal } from 'lucide-react';
 
 export default function LogTerminal({ logs, placeholder }) {
   const terminalRef = useRef(null);
@@ -10,11 +12,23 @@ export default function LogTerminal({ logs, placeholder }) {
   }, [logs]);
 
   return (
-    <div className="card log-card">
-      <h3 className="log-title">Execution Logs</h3>
-      <div className="log" ref={terminalRef}>
-        {logs && logs.length > 0 ? logs.join('\n') : (placeholder || 'Ready. Logs will output here during process...')}
-      </div>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Terminal className="h-4 w-4" />
+          Execution Logs
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div
+          ref={terminalRef}
+          className="bg-black text-emerald-400 font-mono text-xs leading-relaxed p-4 rounded-lg max-h-[180px] min-h-[60px] overflow-y-auto border border-border whitespace-pre-wrap"
+        >
+          {logs && logs.length > 0
+            ? logs.join('\n')
+            : (placeholder || 'Ready. Logs will appear here...')}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

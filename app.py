@@ -175,10 +175,15 @@ def silence_start():
 @app.route("/api/combine/start", methods=["POST"])
 def combine_start():
     data = request.get_json(force=True)
+    zoom_min = float(data.get("zoom_min", data.get("zoom", 10)))
+    zoom_max = float(data.get("zoom_max", data.get("zoom", 10)))
+    if zoom_min < 0 or zoom_max > 40 or zoom_min > zoom_max:
+        return jsonify({"error": "zoom range must be between 0 and 40%, with minimum no greater than maximum"}), 400
     job_id = new_job()
     kwargs = {
         "folder": data["folder"],
-        "zoom": float(data.get("zoom") or 10),
+        "zoom_min": zoom_min,
+        "zoom_max": zoom_max,
         "start_zoomed": bool(data.get("start_zoomed", False)),
         "output": data.get("output") or None,
     }

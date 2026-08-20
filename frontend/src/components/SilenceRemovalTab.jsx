@@ -1,18 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 import VideoPreviewPlayer from './VideoPreviewPlayer';
 import LogTerminal from './LogTerminal';
-import { Video, FolderOpen, Play, CheckCircle, AlertCircle, FileVideo } from 'lucide-react';
+import { Video, Play, CheckCircle, AlertCircle, FolderOpen } from 'lucide-react';
 
 export default function SilenceRemovalTab() {
   const [inputPath, setInputPath] = useState('');
-  const [noiseVal, setNoiseVal] = useState(-30);
-  const [duration, setDuration] = useState(0.5);
-  const [padStart, setPadStart] = useState(0.15);
-  const [padEnd, setPadEnd] = useState(0.40);
+  const [noiseVal, setNoiseVal] = useState([-30]);
+  const [duration, setDuration] = useState([0.5]);
+  const [padStart, setPadStart] = useState([0.15]);
+  const [padEnd, setPadEnd] = useState([0.40]);
   const [useCopy, setUseCopy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [statusMessage, setStatusMessage] = useState('Ready.');
   const [jobResult, setJobResult] = useState(null);
   const [jobError, setJobError] = useState(null);
   const [isDryRun, setIsDryRun] = useState(true);
@@ -27,9 +35,7 @@ export default function SilenceRemovalTab() {
         body: JSON.stringify({ mode: "file" })
       });
       const data = await res.json();
-      if (data.path) {
-        setInputPath(data.path);
-      }
+      if (data.path) setInputPath(data.path);
     } catch (err) {
       console.error("Browse failed:", err);
     }
@@ -44,17 +50,12 @@ export default function SilenceRemovalTab() {
   };
 
   const startSilenceJob = async (dryRun = true) => {
-    if (!inputPath) {
-      alert("Please select a video file first.");
-      return;
-    }
-
+    if (!inputPath) { alert("Please select a video file first."); return; }
     setIsRunning(true);
     setIsDryRun(dryRun);
     setLogs(["Starting process..."]);
     setJobResult(null);
     setJobError(null);
-    setStatusMessage("Starting process...");
 
     try {
       const res = await fetch("/api/silence/start", {
@@ -62,10 +63,10 @@ export default function SilenceRemovalTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           input_path: inputPath,
-          noise: `${noiseVal}dB`,
-          duration: parseFloat(duration),
-          pad_start: parseFloat(padStart),
-          pad_end: parseFloat(padEnd),
+          noise: `${noiseVal[0]}dB`,
+          duration: duration[0],
+          pad_start: padStart[0],
+          pad_end: padEnd[0],
           dry_run: dryRun,
           use_copy: useCopy
         })
@@ -78,245 +79,192 @@ export default function SilenceRemovalTab() {
     }
   };
 
-  const pollJob = (jobId, dryRun) => {
+  const pollJob = (jobId) => {
     const timer = setInterval(async () => {
       try {
         const res = await fetch(`/api/status/${jobId}`);
         const job = await res.json();
-        
-        if (job.log) {
-          setLogs(job.log);
-        }
-
-        if (job.status === "done") {
-          clearInterval(timer);
-          setJobResult(job.result);
-          setIsRunning(false);
-          setStatusMessage("Done.");
-        } else if (job.status === "error") {
-          clearInterval(timer);
-          setJobError(job.error);
-          setIsRunning(false);
-          setStatusMessage("Failed.");
-        }
+        if (job.log) setLogs(job.log);
+        if (job.status === "done") { clearInterval(timer); setJobResult(job.result); setIsRunning(false); }
+        else if (job.status === "error") { clearInterval(timer); setJobError(job.error); setIsRunning(false); }
       } catch (err) {
-        clearInterval(timer);
-        setJobError(err.message);
-        setIsRunning(false);
-        setStatusMessage("Failed.");
+        clearInterval(timer); setJobError(err.message); setIsRunning(false);
       }
     }, 800);
   };
 
   return (
-    <div className="two-col-layout">
-      {/* Left Column: Controls */}
-      <div className="left-col">
-        {/* File Selector Card */}
-        <div className="card choose-file-card">
-          <div className="file-drop-zone">
-            <div className="file-icon-wrapper">
-              <Video />
-            </div>
-            <h3>Choose a video file</h3>
-            <p class="file-subtext">MP4, MOV, MKV — processed locally on your machine</p>
-            <div className="path-row" style={{ width: '100%', maxWidth: '480px', margin: '0 auto 10px auto' }}>
-              <input 
-                type="text" 
-                value={inputPath}
-                onChange={(e) => setInputPath(e.target.value)}
-                placeholder="Type or paste video file path here..."
-              />
-              <button className="btn btn-secondary browse-btn" onClick={handleBrowse} style={{ marginTop: 0 }}>
-                Browse
-              </button>
-            </div>
-            <div className={`selected-filename-badge ${inputPath ? 'has-file' : ''}`}>
-              {filename}
-            </div>
-          </div>
-        </div>
+    <div className="flex gap-8 items-start">
+      {/* Left Column */}
+      <div className="w-[520px] shrink-0 space-y-5">
 
-        {/* Detection Settings Card */}
-        <div className="card settings-card">
-          <h3 className="settings-title">Detection settings</h3>
-          
-          <div className="slider-field">
-            <div className="slider-header">
-              <span className="slider-label">Silence threshold</span>
-              <span className="slider-value">{noiseVal} dB</span>
-            </div>
-            <input 
-              type="range" 
-              min="-60" 
-              max="-10" 
-              value={noiseVal} 
-              onChange={(e) => setNoiseVal(parseInt(e.target.value))}
-            />
-            <p className="slider-help">How quiet audio must be to count as silence.</p>
-          </div>
-
-          <div className="slider-field">
-            <div className="slider-header">
-              <span className="slider-label">Minimum silence length</span>
-              <span className="slider-value">{parseFloat(duration).toFixed(2)} s</span>
-            </div>
-            <input 
-              type="range" 
-              min="0.1" 
-              max="3.0" 
-              step="0.05" 
-              value={duration} 
-              onChange={(e) => setDuration(parseFloat(e.target.value))}
-            />
-            <p className="slider-help">Shorter pauses are kept as natural speech.</p>
-          </div>
-
-          <div className="slider-grid">
-            <div className="slider-field">
-              <div className="slider-header">
-                <span className="slider-label">Cut buffer (before)</span>
-                <span className="slider-value">{parseFloat(padStart).toFixed(2)} s</span>
+        {/* File Selector */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center border-2 border-dashed border-border rounded-xl p-8 hover:border-primary/50 transition-colors">
+              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Video className="h-6 w-6 text-primary" />
               </div>
-              <input 
-                type="range" 
-                min="0.0" 
-                max="1.0" 
-                step="0.05" 
-                value={padStart} 
-                onChange={(e) => setPadStart(parseFloat(e.target.value))}
-              />
-            </div>
-            
-            <div className="slider-field">
-              <div className="slider-header">
-                <span className="slider-label">Cut buffer (after)</span>
-                <span className="slider-value">{parseFloat(padEnd).toFixed(2)} s</span>
+              <h3 className="text-base font-semibold mb-1">Choose a video file</h3>
+              <p className="text-sm text-muted-foreground mb-5">MP4, MOV, MKV — processed locally on your machine</p>
+              <div className="flex gap-2 w-full max-w-md">
+                <Input
+                  value={inputPath}
+                  onChange={(e) => setInputPath(e.target.value)}
+                  placeholder="Paste video file path…"
+                />
+                <Button variant="secondary" onClick={handleBrowse}>Browse</Button>
               </div>
-              <input 
-                type="range" 
-                min="0.0" 
-                max="1.0" 
-                step="0.05" 
-                value={padEnd} 
-                onChange={(e) => setPadEnd(parseFloat(e.target.value))}
-              />
+              <Badge variant={inputPath ? "default" : "secondary"} className="mt-4 max-w-full truncate">
+                {filename}
+              </Badge>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="checkbox-row" style={{ marginTop: '15px' }}>
-            <label className="custom-checkbox">
-              <input 
-                type="checkbox" 
-                checked={useCopy} 
-                onChange={(e) => setUseCopy(e.target.checked)}
-              />
-              <span className="checkbox-box"></span>
-              <span className="checkbox-text">Use stream copy (fast, but only safe with frequent keyframes)</span>
-            </label>
-          </div>
-        </div>
+        {/* Settings */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Detection settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Silence threshold</Label>
+                <Badge variant="outline">{noiseVal[0]} dB</Badge>
+              </div>
+              <Slider min={-60} max={-10} step={1} value={noiseVal} onValueChange={setNoiseVal} />
+              <p className="text-xs text-muted-foreground">How quiet audio must be to count as silence.</p>
+            </div>
 
-        {/* Action Row */}
-        <div className="action-row">
-          <button 
-            className="btn btn-primary run-action-btn" 
-            disabled={isRunning}
-            onClick={() => startSilenceJob(true)}
-          >
-            <Play className="btn-icon" />
-            Preview silences
-          </button>
-        </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Minimum silence length</Label>
+                <Badge variant="outline">{duration[0].toFixed(2)} s</Badge>
+              </div>
+              <Slider min={0.1} max={3.0} step={0.05} value={duration} onValueChange={setDuration} />
+              <p className="text-xs text-muted-foreground">Shorter pauses are kept as natural speech.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs">Buffer (before)</Label>
+                  <Badge variant="outline" className="text-xs">{padStart[0].toFixed(2)} s</Badge>
+                </div>
+                <Slider min={0} max={1} step={0.05} value={padStart} onValueChange={setPadStart} />
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs">Buffer (after)</Label>
+                  <Badge variant="outline" className="text-xs">{padEnd[0].toFixed(2)} s</Badge>
+                </div>
+                <Slider min={0} max={1} step={0.05} value={padEnd} onValueChange={setPadEnd} />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center gap-3">
+              <Checkbox id="use-copy" checked={useCopy} onCheckedChange={setUseCopy} />
+              <Label htmlFor="use-copy" className="text-sm text-muted-foreground cursor-pointer">
+                Use stream copy (fast, but only safe with frequent keyframes)
+              </Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button className="w-full h-12 text-base font-semibold" disabled={isRunning} onClick={() => startSilenceJob(true)}>
+          <Play className="h-4 w-4 mr-2" />
+          Preview silences
+        </Button>
       </div>
 
-      {/* Right Column: Live Preview & Status */}
-      <div className="right-col">
+      {/* Right Column */}
+      <div className="flex-1 min-w-0 space-y-5">
         <VideoPreviewPlayer path={inputPath} prefix="s" />
+        <LogTerminal logs={logs} />
 
-        <LogTerminal logs={logs} placeholder="Ready. Logs will output here during process..." />
-
-        {/* Results Card */}
         {(jobResult || jobError) && (
-          <div className="card results-card">
-            <h3 className="results-title">Analysis Results</h3>
-            
-            {jobError && (
-              <div className="error-message">
-                <AlertCircle className="msg-icon" style={{ marginRight: '8px', float: 'left' }} />
-                Error: {jobError}
-              </div>
-            )}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold">Analysis Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {jobError && (
+                <div className="flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 p-4 rounded-lg text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {jobError}
+                </div>
+              )}
 
-            {jobResult && isDryRun && (
-              <div>
-                {jobResult.silences && jobResult.silences.length > 0 ? (
-                  <>
-                    <p className="result-summary">Found <strong>{jobResult.silences.length}</strong> silence segments:</p>
-                    <div className="table-wrapper">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>Start (s)</th>
-                            <th>End (s)</th>
-                            <th>Length (s)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {jobResult.silences.map((s, i) => (
-                            <tr key={i}>
-                              <td>{i + 1}</td>
-                              <td>{s.start.toFixed(2)}</td>
-                              <td>{s.end.toFixed(2)}</td>
-                              <td>{s.length.toFixed(2)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    
-                    <div className="result-action-bar">
-                      <button 
-                        className="btn btn-primary split-confirm-btn" 
-                        onClick={() => startSilenceJob(false)}
-                      >
-                        <CheckCircle className="btn-icon" />
-                        Continue or Split
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="info-message">No silence detected with the current settings.</div>
-                )}
-              </div>
-            )}
-
-            {jobResult && !isDryRun && (
-              <div>
-                {jobResult.clips && jobResult.clips.length > 0 ? (
-                  <>
-                    <div className="success-message">
-                      <CheckCircle className="msg-icon" />
-                      <div>
-                        <strong>Process Completed Successfully</strong>
-                        <p>{jobResult.clips.length} clip(s) saved to workspace.</p>
+              {jobResult && isDryRun && (
+                <>
+                  {jobResult.silences?.length > 0 ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Found <strong className="text-foreground">{jobResult.silences.length}</strong> silence segments:
+                      </p>
+                      <div className="max-h-[240px] overflow-y-auto border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Start (s)</TableHead>
+                              <TableHead>End (s)</TableHead>
+                              <TableHead>Length (s)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {jobResult.silences.map((s, i) => (
+                              <TableRow key={i}>
+                                <TableCell className="font-medium">{i + 1}</TableCell>
+                                <TableCell>{s.start.toFixed(2)}</TableCell>
+                                <TableCell>{s.end.toFixed(2)}</TableCell>
+                                <TableCell>{s.length.toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                    </div>
-                    <button 
-                      className="btn btn-secondary reveal-btn" 
-                      onClick={() => handleReveal(jobResult.out_dir)}
-                    >
-                      <FolderOpen className="btn-icon" />
-                      Reveal in Explorer
-                    </button>
-                  </>
-                ) : (
-                  <div className="info-message">No clips were created.</div>
-                )}
-              </div>
-            )}
-          </div>
+                      <div className="analysis-results-actions flex flex-col gap-3 mt-4 pt-4 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          Review the detected pauses above, then create the cleaned clips.
+                        </p>
+                        <Button className="w-full sm:w-auto sm:self-end" onClick={() => startSilenceJob(false)}>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Continue &amp; Split
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground bg-muted p-4 rounded-lg">No silence detected with the current settings.</p>
+                  )}
+                </>
+              )}
+
+              {jobResult && !isDryRun && (
+                <>
+                  {jobResult.clips?.length > 0 ? (
+                    <>
+                      <div className="flex items-start gap-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 p-4 rounded-lg text-sm mb-4">
+                        <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div>
+                          <strong>Process Completed</strong>
+                          <p className="text-emerald-400/80 mt-0.5">{jobResult.clips.length} clip(s) saved.</p>
+                        </div>
+                      </div>
+                      <Button variant="secondary" className="w-full" onClick={() => handleReveal(jobResult.out_dir)}>
+                        <FolderOpen className="h-4 w-4 mr-2" /> Reveal in Explorer
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground bg-muted p-4 rounded-lg">No clips were created.</p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
