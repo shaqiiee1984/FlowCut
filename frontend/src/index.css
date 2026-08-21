@@ -430,6 +430,103 @@
     line-height: 1.5;
   }
 
+  .processing-monitor {
+    padding: 1rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 28%, var(--border));
+    border-radius: 0.75rem;
+    background: color-mix(in oklch, var(--primary) 5%, var(--card));
+    box-shadow: 0 8px 24px oklch(0 0 0 / 10%);
+  }
+
+  .processing-monitor-header,
+  .processing-monitor-title,
+  .processing-monitor-meta,
+  .processing-monitor-live {
+    display: flex;
+    align-items: center;
+  }
+
+  .processing-monitor-header {
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .processing-monitor-title {
+    gap: 0.5rem;
+    color: var(--foreground);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .processing-monitor-title svg {
+    color: var(--primary);
+  }
+
+  .processing-monitor-header > strong {
+    color: var(--primary);
+    font-size: 0.875rem;
+  }
+
+  .processing-spinner {
+    margin-left: auto;
+    color: var(--muted-foreground);
+    animation: processing-spin 1s linear infinite;
+  }
+
+  .processing-progress-track {
+    height: 0.4rem;
+    margin-top: 0.75rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  .processing-progress-bar {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary);
+    transition: width 300ms ease;
+  }
+
+  .processing-monitor-meta {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    text-transform: capitalize;
+  }
+
+  .processing-monitor-meta b {
+    color: var(--foreground);
+    font-weight: 500;
+  }
+
+  .processing-monitor-live {
+    gap: 0.5rem;
+    min-width: 0;
+    margin: 0.75rem 0 0;
+    overflow: hidden;
+    color: var(--muted-foreground);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .processing-live-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: oklch(0.75 0.15 145);
+    box-shadow: 0 0 0 3px color-mix(in oklch, oklch(0.75 0.15 145) 16%, transparent);
+  }
+
+  @keyframes processing-spin {
+    to { transform: rotate(360deg); }
+  }
+
   @media (max-width: 900px) {
     .two-col-layout {
       grid-template-columns: 1fr;

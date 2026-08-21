@@ -29,7 +29,8 @@ def segments_to_srt(segments):
 _model_cache = {}
 
 
-def run_captions(input_path, model="small", language=None, output=None, log=print):
+def run_captions(input_path, model="small", language=None, output=None, log=print,
+                 progress=lambda **kwargs: None):
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"can't find {input_path}")
 

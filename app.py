@@ -18,7 +18,10 @@ LOCK = threading.Lock()
 
 def new_job():
     job_id = str(uuid.uuid4())
-    JOBS[job_id] = {"status": "running", "log": [], "result": None, "error": None}
+    JOBS[job_id] = {
+        "status": "running", "log": [], "result": None, "error": None,
+        "phase": "Starting", "progress": 0, "stats": {}
+    }
     return job_id
 
 
@@ -27,22 +30,39 @@ def append_log(job_id, msg):
         JOBS[job_id]["log"].append(msg)
 
 
+def update_job(job_id, phase=None, progress=None, stats=None):
+    with LOCK:
+        if phase is not None:
+            JOBS[job_id]["phase"] = phase
+        if progress is not None:
+            JOBS[job_id]["progress"] = max(0, min(100, round(progress)))
+        if stats:
+            JOBS[job_id]["stats"].update(stats)
+
+
 def finish_job(job_id, result):
     with LOCK:
         JOBS[job_id]["status"] = "done"
+        JOBS[job_id]["phase"] = "Complete"
+        JOBS[job_id]["progress"] = 100
         JOBS[job_id]["result"] = result
 
 
 def fail_job(job_id, error):
     with LOCK:
         JOBS[job_id]["status"] = "error"
+        JOBS[job_id]["phase"] = "Failed"
         JOBS[job_id]["error"] = str(error)
 
 
 def run_in_thread(job_id, target, kwargs):
     def wrapper():
         try:
-            result = target(log=lambda m: append_log(job_id, m), **kwargs)
+            result = target(
+                log=lambda m: append_log(job_id, m),
+                progress=lambda **data: update_job(job_id, **data),
+                **kwargs,
+            )
             finish_job(job_id, result)
         except Exception as e:
             append_log(job_id, f"ERROR: {e}")

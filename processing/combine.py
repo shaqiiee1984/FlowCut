@@ -50,7 +50,8 @@ def process_clip(src, out_path, zoom, orig_w, orig_h):
     return result.returncode == 0
 
 
-def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=False, output=None, log=print):
+def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=False, output=None, log=print,
+                progress=lambda **kwargs: None):
     if not os.path.isdir(folder):
         raise NotADirectoryError(f"can't find folder {folder}")
 
@@ -66,6 +67,7 @@ def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=Fals
         raise FileNotFoundError(f"no .mp4 files found in {folder}")
 
     log(f"found {len(clips)} clip(s), checking durations...")
+    progress(phase="Checking clips", progress=5, stats={"clips_found": len(clips), "clips_done": 0})
 
     valid_clips = []
     skipped = []
@@ -76,6 +78,11 @@ def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=Fals
             skipped.append(os.path.basename(path))
         else:
             valid_clips.append(path)
+        progress(
+            phase="Checking clips",
+            progress=5 + ((len(valid_clips) + len(skipped)) / len(clips)) * 15,
+            stats={"clips_found": len(clips), "clips_valid": len(valid_clips), "clips_skipped": len(skipped)},
+        )
 
     if not valid_clips:
         raise ValueError("no valid (non-empty) clips left after filtering")
@@ -95,6 +102,7 @@ def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=Fals
         plan.append((path, is_zoomed, zoom_amount))
 
     log(f"combine plan ({len(plan)} clip(s), random zoom = {zoom_min:.0f}-{zoom_max:.0f}% on alternates):")
+    progress(phase="Preparing combine plan", progress=25, stats={"clips_total": len(plan), "clips_done": 0})
     for path, is_zoomed, zoom_amount in plan:
         tag = f"ZOOM +{zoom_amount:.0f}%" if is_zoomed else "original"
         log(f"  {os.path.basename(path):<12} -> {tag}")
@@ -117,12 +125,18 @@ def run_combine(folder, zoom=10, zoom_min=None, zoom_max=None, start_zoomed=Fals
             if not ok:
                 raise RuntimeError(f"ffmpeg failed processing {path}")
             processed_paths.append(processed_path)
+            progress(
+                phase="Processing clips",
+                progress=25 + ((i + 1) / len(plan)) * 65,
+                stats={"clips_total": len(plan), "clips_done": i + 1, "current_clip": os.path.basename(path), "zoom": round(zoom_amount, 1)},
+            )
 
         with open(list_path, "w") as f:
             for p in processed_paths:
                 f.write(f"file '{p}'\n")
 
         log("stitching all clips together...")
+        progress(phase="Stitching clips", progress=95, stats={"clips_total": len(plan), "clips_done": len(plan)})
         concat_cmd = [
             "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
             "-c", "copy", output_path

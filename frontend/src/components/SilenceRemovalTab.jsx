@@ -10,6 +10,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Separator } from '@/components/ui/separator';
 import VideoPreviewPlayer from './VideoPreviewPlayer';
 import LogTerminal from './LogTerminal';
+import ProcessingMonitor from './ProcessingMonitor';
 import { Video, Play, CheckCircle, AlertCircle, FolderOpen } from 'lucide-react';
 
 export default function SilenceRemovalTab() {
@@ -24,6 +25,7 @@ export default function SilenceRemovalTab() {
   const [jobResult, setJobResult] = useState(null);
   const [jobError, setJobError] = useState(null);
   const [isDryRun, setIsDryRun] = useState(true);
+  const [jobTelemetry, setJobTelemetry] = useState({ phase: '', progress: 0, stats: {} });
 
   const filename = inputPath ? (inputPath.split(/[/\\]/).pop() || inputPath) : 'No file selected';
 
@@ -56,6 +58,7 @@ export default function SilenceRemovalTab() {
     setLogs(["Starting process..."]);
     setJobResult(null);
     setJobError(null);
+    setJobTelemetry({ phase: 'Starting', progress: 0, stats: {} });
 
     try {
       const res = await fetch("/api/silence/start", {
@@ -85,6 +88,7 @@ export default function SilenceRemovalTab() {
         const res = await fetch(`/api/status/${jobId}`);
         const job = await res.json();
         if (job.log) setLogs(job.log);
+        setJobTelemetry({ phase: job.phase, progress: job.progress || 0, stats: job.stats || {} });
         if (job.status === "done") { clearInterval(timer); setJobResult(job.result); setIsRunning(false); }
         else if (job.status === "error") { clearInterval(timer); setJobError(job.error); setIsRunning(false); }
       } catch (err) {
@@ -183,6 +187,13 @@ export default function SilenceRemovalTab() {
       {/* Right Column */}
       <div className="flex-1 min-w-0 space-y-5">
         <VideoPreviewPlayer path={inputPath} prefix="s" />
+        <ProcessingMonitor
+          isRunning={isRunning}
+          phase={jobTelemetry.phase}
+          progress={jobTelemetry.progress}
+          stats={jobTelemetry.stats}
+          logs={logs}
+        />
         <LogTerminal logs={logs} />
 
         {(jobResult || jobError) && (

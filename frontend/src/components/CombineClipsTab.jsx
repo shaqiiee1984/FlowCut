@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import VideoPreviewPlayer from './VideoPreviewPlayer';
 import LogTerminal from './LogTerminal';
+import ProcessingMonitor from './ProcessingMonitor';
 import { Folder, FolderOpen, Layers, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function CombineClipsTab() {
@@ -13,6 +14,7 @@ export default function CombineClipsTab() {
   const [jobResult, setJobResult] = useState(null);
   const [jobError, setJobError] = useState(null);
   const [videoPreviewPath, setVideoPreviewPath] = useState('');
+  const [jobTelemetry, setJobTelemetry] = useState({ phase: '', progress: 0, stats: {} });
 
   const folderName = folderPath ? (folderPath.split(/[/\\]/).pop() || folderPath) : 'No folder selected';
 
@@ -67,6 +69,7 @@ export default function CombineClipsTab() {
     setJobResult(null);
     setJobError(null);
     setVideoPreviewPath('');
+    setJobTelemetry({ phase: 'Starting', progress: 0, stats: {} });
 
     try {
       const res = await fetch("/api/combine/start", {
@@ -97,6 +100,7 @@ export default function CombineClipsTab() {
         if (job.log) {
           setLogs(job.log);
         }
+        setJobTelemetry({ phase: job.phase, progress: job.progress || 0, stats: job.stats || {} });
 
         if (job.status === "done") {
           clearInterval(timer);
@@ -229,6 +233,14 @@ export default function CombineClipsTab() {
           path={videoPreviewPath} 
           prefix="c" 
           placeholderText="Combined video preview will be available here when completed."
+        />
+
+        <ProcessingMonitor
+          isRunning={isRunning}
+          phase={jobTelemetry.phase}
+          progress={jobTelemetry.progress}
+          stats={jobTelemetry.stats}
+          logs={logs}
         />
 
         <LogTerminal logs={logs} placeholder="Ready. Logs will output here during process..." />

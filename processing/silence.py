@@ -67,14 +67,17 @@ def cut_segment(path, start, end, out_path, use_copy):
 
 
 def run_remove_silence(input_path, noise="-30dB", duration=0.5, pad_start=0.15,
-                        pad_end=0.4, use_copy=False, dry_run=False, log=print):
+                        pad_end=0.4, use_copy=False, dry_run=False, log=print,
+                        progress=lambda **kwargs: None):
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"can't find {input_path}")
 
     log("checking duration...")
+    progress(phase="Reading video", progress=5, stats={"source": os.path.basename(input_path)})
     total = get_duration(input_path)
 
     log("scanning for silence...")
+    progress(phase="Scanning for silence", progress=20, stats={"duration": total})
     silences = detect_silence(input_path, noise, duration)
 
     if not silences:
@@ -89,6 +92,7 @@ def run_remove_silence(input_path, noise="-30dB", duration=0.5, pad_start=0.15,
             "median": lengths[len(lengths) // 2]
         } if lengths else {}
         log(f"found {len(silences)} silent stretch(es)")
+        progress(phase="Analysis ready", progress=100, stats={"silences": len(silences)})
         return {"silences": report, "stats": stats, "clips": [], "out_dir": None}
 
     input_dir = os.path.dirname(os.path.abspath(input_path))
@@ -99,6 +103,7 @@ def run_remove_silence(input_path, noise="-30dB", duration=0.5, pad_start=0.15,
     keep_segments = invert_to_keep_segments(silences, total, pad_start, pad_end)
     log(f"found {len(silences)} silent stretch(es), keeping {len(keep_segments)} segment(s)")
     log(f"saving clips to {out_dir}")
+    progress(phase="Creating clips", progress=25, stats={"silences": len(silences), "clips_total": len(keep_segments), "clips_done": 0})
 
     clips = []
     for i, (start, end) in enumerate(keep_segments, start=1):
@@ -108,8 +113,14 @@ def run_remove_silence(input_path, noise="-30dB", duration=0.5, pad_start=0.15,
         status = "saved" if ok else "FAILED"
         log(f"  {status} {clip_name}: {start:.2f}s to {end:.2f}s")
         clips.append({"name": clip_name, "start": start, "end": end, "status": status})
+        progress(
+            phase="Creating clips",
+            progress=25 + (i / len(keep_segments)) * 70,
+            stats={"clips_total": len(keep_segments), "clips_done": i, "current_clip": clip_name},
+        )
 
     log(f"done, {len(keep_segments)} clip(s) saved to {out_dir}")
+    progress(phase="Complete", progress=100, stats={"clips_total": len(keep_segments), "clips_done": len(keep_segments)})
     return {
         "silences": [{"start": s, "end": e, "length": e - s} for s, e in silences],
         "clips": clips,
